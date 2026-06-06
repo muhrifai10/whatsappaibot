@@ -8,7 +8,7 @@ app.use(express.json());
 app.use(express.static(path.join(__dirname, "public")));
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-const GEMINI_URL     = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent";
+const GEMINI_URL     = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent";
 
 const SYSTEM = "Kamu adalah asisten AI yang ramah dan membantu. Balas dalam bahasa Indonesia yang santai dan friendly seperti chat WhatsApp. Pakai emoji sesekali. Jawab singkat dan padat kecuali memang perlu penjelasan panjang.";
 
