@@ -1,14 +1,13 @@
 {
   "name": "whatsapp-ai-bot",
   "version": "1.0.0",
-  "description": "WhatsApp-style AI chatbot powered by Claude",
+  "description": "WhatsApp-style AI chatbot powered by Gemini",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
     "dev": "npx nodemon server.js"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.39.0",
     "cors": "^2.8.5",
     "express": "^4.19.2"
   },
