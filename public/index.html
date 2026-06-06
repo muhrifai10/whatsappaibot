@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>Claude AI Chat</title>
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --teal:      #075E54;
+      --dgreen:    #128C7E;
+      --green:     #25D366;
+      --sent:      #DCF8C6;
+      --bg:        #ECE5DD;
+      --sub:       #667781;
+      --border:    #E9EDEF;
+      --text:      #111B21;
+      --radius:    8px;
+      --shadow:    0 1px 2px rgba(0,0,0,.13);
+    }
+
+    body {
+      font-family: 'Nunito', sans-serif;
+      background: var(--bg);
+      height: 100dvh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23b2a899' fill-opacity='.14'%3E%3Ccircle cx='12' cy='12' r='5'/%3E%3Ccircle cx='42' cy='42' r='5'/%3E%3Ccircle cx='42' cy='12' r='3'/%3E%3Ccircle cx='12' cy='42' r='3'/%3E%3C/g%3E%3C/svg%3E");
+    }
+
+    /* ── APP SHELL ── */
+    .app {
+      width: 100%;
+      max-width: 440px;
+      height: 100dvh;
+      max-height: 820px;
+      background: var(--bg);
+      border-radius: 16px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 16px 56px rgba(0,0,0,.26), 0 2px 8px rgba(0,0,0,.1);
+    }
+
+    /* ── HEADER ── */
+    .header {
+      background: var(--teal);
+      padding: 11px 16px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-shrink: 0;
+    }
+    .avatar {
+      width: 44px; height: 44px;
+      border-radius: 50%;
+      background: var(--dgreen);
+      display: flex; align-items: center; justify-content: center;
+      position: relative; flex-shrink: 0;
+    }
+    .avatar svg { width: 26px; height: 26px; fill: white; }
+    .online-dot {
+      position: absolute; bottom: 2px; right: 2px;
+      width: 11px; height: 11px;
+      background: var(--green);
+      border-radius: 50%;
+      border: 2px solid var(--teal);
+    }
+    .hinfo { flex: 1; }
+    .hname { color: #fff; font-size: 16px; font-weight: 700; }
+    .hstatus { color: rgba(255,255,255,.72); font-size: 12px; margin-top: 1px; transition: color .2s; }
+    .hstatus.typing { color: var(--green); }
+    .hbtn {
+      background: none; border: none; cursor: pointer;
+      padding: 7px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      transition: background .15s;
+    }
+    .hbtn:hover { background: rgba(255,255,255,.12); }
+    .hbtn svg { width: 20px; height: 20px; fill: white; }
+
+    /* ── MESSAGES ── */
+    .messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 10px 12px 6px;
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+      scroll-behavior: smooth;
+    }
+    .messages::-webkit-scrollbar { width: 4px; }
+    .messages::-webkit-scrollbar-thumb { background: rgba(0,0,0,.18); border-radius: 3px; }
+
+    .date-tag {
+      text-align: center; margin: 8px 0;
+    }
+    .date-tag span {
+      background: #d4dfe3; color: var(--sub);
+      font-size: 11.5px; padding: 3px 11px;
+      border-radius: 8px; font-weight: 600;
+    }
+
+    /* bubble row */
+    .row { display: flex; animation: msgIn .16s ease-out; }
+    .row.sent { justify-content: flex-end; }
+    .row.recv { justify-content: flex-start; }
+
+    @keyframes msgIn {
+      from { opacity: 0; transform: translateY(7px) scale(.97); }
+      to   { opacity: 1; transform: none; }
+    }
+
+    .bubble {
+      max-width: 76%;
+      padding: 7px 10px 4px;
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      font-size: 14.5px;
+      line-height: 1.55;
+      word-break: break-word;
+      white-space: pre-wrap;
+      color: var(--text);
+    }
+    .row.sent .bubble  { background: var(--sent); border-radius: 8px 8px 2px 8px; }
+    .row.recv .bubble  { background: #fff;         border-radius: 8px 8px 8px 2px; }
+
+    .meta {
+      display: flex; align-items: center;
+      justify-content: flex-end;
+      gap: 3px; margin-top: 3px;
+    }
+    .meta-time { font-size: 11px; color: var(--sub); }
+
+    /* double-tick */
+    .tick svg { width: 16px; height: 16px; }
+
+    /* typing dots */
+    .typing-wrap { display: flex; justify-content: flex-start; }
+    .typing-bubble {
+      background: #fff; border-radius: 8px 8px 8px 2px;
+      padding: 10px 14px; box-shadow: var(--shadow);
+      display: flex; gap: 4px; align-items: center;
+      animation: msgIn .16s ease-out;
+    }
+    .typing-bubble.hidden { display: none; }
+    .dot {
+      width: 7px; height: 7px; border-radius: 50%;
+      background: #90A4AE;
+      animation: bwave 1.2s infinite ease-in-out;
+    }
+    .dot:nth-child(2) { animation-delay: .18s; }
+    .dot:nth-child(3) { animation-delay: .36s; }
+    @keyframes bwave {
+      0%,60%,100% { transform: translateY(0); }
+      30%          { transform: translateY(-5px); }
+    }
+
+    /* ── INPUT BAR ── */
+    .inputbar {
+      background: var(--border);
+      padding: 8px 12px;
+      display: flex; align-items: center; gap: 10px;
+      flex-shrink: 0;
+    }
+    .input-wrap {
+      flex: 1; background: #fff; border-radius: 24px;
+      display: flex; align-items: center;
+      padding: 6px 14px; gap: 6px;
+      box-shadow: 0 1px 2px rgba(0,0,0,.07);
+    }
+    .emoji-btn {
+      font-size: 20px; background: none; border: none;
+      cursor: pointer; color: #AEBAC1; line-height: 1;
+      transition: color .15s;
+    }
+    .emoji-btn:hover { color: var(--sub); }
+    textarea {
+      flex: 1; border: none; outline: none;
+      font-size: 15px; font-family: inherit;
+      color: var(--text); background: transparent;
+      resize: none; line-height: 1.5;
+      height: 24px; max-height: 100px; overflow-y: hidden;
+    }
+    textarea::placeholder { color: #AEBAC1; }
+
+    .send-btn {
+      width: 48px; height: 48px; border-radius: 50%;
+      background: var(--dgreen); border: none;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+      box-shadow: 0 2px 8px rgba(7,94,84,.36);
+      transition: background .15s, transform .1s;
+    }
+    .send-btn:hover  { background: var(--teal); }
+    .send-btn:active { transform: scale(.92); }
+    .send-btn:disabled { background: #B0BEC5; box-shadow: none; cursor: not-allowed; }
+    .send-btn svg { width: 22px; height: 22px; fill: white; margin-left: 2px; }
+
+    /* ── TOAST ── */
+    #toast {
+      position: fixed; bottom: 70px; left: 50%;
+      transform: translateX(-50%) translateY(14px);
+      background: rgba(0,0,0,.78); color: #fff;
+      padding: 9px 20px; border-radius: 22px;
+      font-size: 13px; opacity: 0; pointer-events: none;
+      transition: opacity .22s, transform .22s;
+      white-space: nowrap; z-index: 99;
+    }
+    #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  </style>
+</head>
+<body>
+
+<div class="app">
+
+  <!-- HEADER -->
+  <div class="header">
+    <div class="avatar">
+      <svg viewBox="0 0 24 24">
+        <path d="M12 2a2 2 0 0 1 2 2c0 .74-.4 1.39-1 1.73V7h1a7 7 0 0 1 7 7v2a7 7 0 0 1-7 7H10A7 7 0 0 1 3 16v-2a7 7 0 0 1 7-7h1V5.73c-.6-.34-1-.99-1-1.73A2 2 0 0 1 12 2M9 14a2 2 0 1 0 0 4 2 2 0 0 0 0-4m6 0a2 2 0 1 0 0 4 2 2 0 0 0 0-4Z"/>
+      </svg>
+      <span class="online-dot"></span>
+    </div>
+    <div class="hinfo">
+      <div class="hname">Claude AI</div>
+      <div class="hstatus" id="status">Online</div>
+    </div>
+    <button class="hbtn" onclick="toast('Fitur belum tersedia 😊')">
+      <svg viewBox="0 0 24 24"><path d="M17 10.5V7a1 1 0 0 0-1-1H4a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-3.5l4 4v-11l-4 4z"/></svg>
+    </button>
+    <button class="hbtn" onclick="toast('Fitur belum tersedia 😊')">
+      <svg viewBox="0 0 24 24"><path d="M6.6 10.8c1.4 2.8 3.8 5.1 6.6 6.6l2.2-2.2c.3-.3.7-.4 1-.2 1.1.4 2.3.6 3.6.6.6 0 1 .4 1 1V20c0 .6-.4 1-1 1-9.4 0-17-7.6-17-17 0-.6.4-1 1-1h3.5c.6 0 1 .4 1 1 0 1.3.2 2.5.6 3.6.1.3 0 .7-.2 1L6.6 10.8z"/></svg>
+    </button>
+    <button class="hbtn" onclick="toast('Tidak ada opsi lain 😄')">
+      <svg viewBox="0 0 24 24"><path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/></svg>
+    </button>
+  </div>
+
+  <!-- MESSAGES -->
+  <div class="messages" id="messages">
+    <div class="date-tag"><span>Hari ini</span></div>
+    <!-- welcome -->
+    <div class="row recv">
+      <div class="bubble">
+        Halo! Aku Claude AI 👋<br><br>
+        Siap bantu kamu ngobrol, jawab pertanyaan, nulis, coding, dan banyak lagi.<br><br>
+        Mau tanya apa? 😊
+        <div class="meta"><span class="meta-time" id="welcome-time"></span></div>
+      </div>
+    </div>
+    <!-- typing indicator — always at the bottom -->
+    <div class="typing-wrap">
+      <div class="typing-bubble hidden" id="typing">
+        <div class="dot"></div><div class="dot"></div><div class="dot"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- INPUT BAR -->
+  <div class="inputbar">
+    <div class="input-wrap">
+      <button class="emoji-btn" onclick="toast('Emoji belum tersedia 😄')">😊</button>
+      <textarea id="inp" placeholder="Ketik pesan..." rows="1"
+        oninput="autoResize(this)"
+        onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendMsg()}">
+      </textarea>
+    </div>
+    <button class="send-btn" id="sendBtn" onclick="sendMsg()">
+      <svg viewBox="0 0 24 24"><path d="M2 21l21-9L2 3v7l15 2-15 2z"/></svg>
+    </button>
+  </div>
+
+</div>
+
+<div id="toast"></div>
+
+<script>
+  // ── helpers ──────────────────────────────────────
+  const $ = id => document.getElementById(id);
+  const msgsEl  = $("messages");
+  const inpEl   = $("inp");
+  const sendBtn = $("sendBtn");
+  const statusEl= $("status");
+  const typingEl= $("typing");
+
+  let history = [];
+  let busy    = false;
+
+  // set welcome time
+  $("welcome-time").textContent = now();
+
+  function now() {
+    const d = new Date();
+    return d.getHours().toString().padStart(2,"0")+":"+d.getMinutes().toString().padStart(2,"0");
+  }
+
+  function autoResize(el) {
+    el.style.height = "auto";
+    el.style.height = Math.min(el.scrollHeight, 100) + "px";
+  }
+
+  function scrollBottom() {
+    setTimeout(()=>{ msgsEl.scrollTop = msgsEl.scrollHeight; }, 30);
+  }
+
+  function setTyping(show) {
+    typingEl.classList.toggle("hidden", !show);
+    if (show) scrollBottom();
+  }
+
+  function addBubble(role, text) {
+    const row = document.createElement("div");
+    row.className = "row " + role;
+
+    const tick = role === "sent"
+      ? `<span class="tick">
+           <svg viewBox="0 0 16 11" fill="none">
+             <path d="M11.071.653a.75.75 0 0 1 1.06 1.06L5.836 8.01a.75.75 0 0 1-1.06 0L1.464 4.698a.75.75 0 0 1 1.06-1.06L5.307 6.42l5.764-5.767Z" fill="#53BDEB"/>
+             <path d="M15.036 1.713a.75.75 0 0 1 0 1.06L7.742 10.07a.75.75 0 0 1-1.06 0L4.5 7.89a.75.75 0 1 1 1.06-1.06l1.651 1.652 6.764-6.77a.75.75 0 0 1 1.061 0Z" fill="#53BDEB"/>
+           </svg>
+         </span>` : "";
+
+    row.innerHTML = `
+      <div class="bubble">
+        ${escHtml(text)}
+        <div class="meta">
+          <span class="meta-time">${now()}</span>
+          ${tick}
+        </div>
+      </div>`;
+
+    // insert before typing indicator row
+    const typingWrap = typingEl.parentElement;
+    msgsEl.insertBefore(row, typingWrap);
+    scrollBottom();
+  }
+
+  function escHtml(str) {
+    return str
+      .replace(/&/g,"&amp;").replace(/</g,"&lt;")
+      .replace(/>/g,"&gt;").replace(/\n/g,"<br>");
+  }
+
+  // ── main send ────────────────────────────────────
+  async function sendMsg() {
+    const text = inpEl.value.trim();
+    if (!text || busy) return;
+
+    inpEl.value = "";
+    inpEl.style.height = "24px";
+
+    addBubble("sent", text);
+    history.push({ role: "user", content: text });
+
+    busy = true;
+    sendBtn.disabled = true;
+    setTyping(true);
+    statusEl.textContent = "mengetik...";
+    statusEl.className   = "hstatus typing";
+
+    try {
+      const res  = await fetch("/api/chat", {
+        method : "POST",
+        headers: { "Content-Type": "application/json" },
+        body   : JSON.stringify({ messages: history })
+      });
+      const data = await res.json();
+
+      if (!res.ok) throw new Error(data.error || "Server error");
+
+      addBubble("recv", data.reply);
+      history.push({ role: "assistant", content: data.reply });
+
+    } catch (err) {
+      addBubble("recv", "❌ " + err.message);
+      history.pop();
+    }
+
+    setTyping(false);
+    busy = false;
+    sendBtn.disabled = false;
+    statusEl.textContent = "Online";
+    statusEl.className   = "hstatus";
+    inpEl.focus();
+  }
+
+  // ── toast ────────────────────────────────────────
+  let _tt;
+  function toast(msg) {
+    const el = $("toast");
+    el.textContent = msg;
+    el.classList.add("show");
+    clearTimeout(_tt);
+    _tt = setTimeout(() => el.classList.remove("show"), 2800);
+  }
+</script>
+</body>
+</html>
